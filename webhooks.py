@@ -72,8 +72,6 @@ def authors(form):
 	return result
 
 def handler(path, username, password):
-	send(username, password, 'eugene.kondrashev@gmail.com', 'hey', 'hey1',
-		files=['/Users/ekondrashev/sources/python/webhooks/com.rcs.webhooks/.project'])
 	class Handler(BaseHTTPRequestHandler):
 
 		#Handler for the POST requests
