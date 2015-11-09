@@ -80,12 +80,14 @@ def rebuild(path):
 	))
 	print 'Log: %s' % log
 	with open(log, 'w') as logfile:
-		if subprocess.Popen(
+		pull = subprocess.Popen(
 			shlex.split('git pull --rebase'),
 			cwd=path,
 			stdout=logfile,
 			stderr=logfile
-			).returncode == 0:
+		)
+		print pull.returncode
+		if pull.returncode == 0:
 			p = subprocess.Popen(
 				shlex.split('mvn clean install'),
 				cwd=path,
@@ -129,6 +131,7 @@ if len(sys.argv) < 2:
 	print "Invalid path to build project and mail account name"
 else:
 	try:
+		rebuild(sys.argv[1])
 		#Create a web server and define the handler to manage the
 		#incoming request
 		server = HTTPServer(('', PORT_NUMBER), handler(sys.argv[1], sys.argv[2], getpass.getpass()))
