@@ -14,6 +14,8 @@ from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.utils import COMMASPACE, formatdate
+import shlex
+from sys import stdout
 
 _author__ = "Eugene Kondrashev"
 __copyright__ = "Copyright 2015, Eugene Kondrashev"
@@ -71,6 +73,28 @@ def authors(form):
 		result.add(commit['author']['email'])
 	return result
 
+def rebuild(path):
+	print path
+	log = os.path.join(
+		'/tmp', str(int(round(time.time() * 1000)))
+	)
+	print 'Log: %s' % log
+	with open(log, 'w') as logfile:
+		if subprocess.Popen(
+			shlex.split('git pull --rebase'),
+			cwd=path,
+			stdout=logfile,
+			stderr=logfile
+			).returncode == 0:
+			p = subprocess.Popen(
+				shlex.split('mvn clean install'),
+				cwd=path,
+				stdout=logfile,
+				stderr=logfile
+			)
+			return p.returncode == 0, log
+	return None, log
+
 def handler(path, username, password):
 	class Handler(BaseHTTPRequestHandler):
 
@@ -90,21 +114,12 @@ def handler(path, username, password):
 					self.send_response(200)
 					self.end_headers()
 					self.wfile.write("Thanks !")
-					log = os.path.join(
-						'/tmp', str(int(round(time.time() * 1000)))
-					)
-					print 'Log: %s' % log
 					subj, msg = '', ''
-					if subprocess.Popen(['git', 'fetch', 'origin', '>>', log, '2>&1']).returncode == 0:
-						if subprocess.Popen(['git', 'rebase', 'origin/master', '>>', log, '2>&1']).returncode == 0:
-							p = subprocess.Popen(
-								['mvn', 'clean', 'install', '>>', log, '2>&1'],
-								cwd=path
-							)
-							if p.returncode == 0:
-								subj, msg = 'Build status: Ok', 'Cool'
-							else:
-								subj, msg = 'Build status: Failed', 'Not cool'
+					succeeded, log = rebuild(path)
+					if succeeded:
+						subj, msg = 'Build status: Ok', 'Cool'
+					else:
+						subj, msg = 'Build status: Failed', 'Not cool'
 					send(username, password, authors(body), subj, msg, [log,])
 					return
 	return Handler
