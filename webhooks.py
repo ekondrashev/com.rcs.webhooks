@@ -105,6 +105,7 @@ def handler(path, username, password):
 								subj, msg = 'Build status: Failed', 'Not cool'
 					send(username, password, authors(body), subj, msg, path)
 					return
+	return Handler
 
 
 if len(sys.argv) < 2:
