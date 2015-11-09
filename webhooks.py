@@ -2,39 +2,125 @@
 from BaseHTTPServer import BaseHTTPRequestHandler,HTTPServer
 from os import curdir, sep
 import cgi
+import json
+import sys
+import os
+import subprocess
+import time
+import getpass
+import smtplib
+from os.path import basename
+from email.mime.application import MIMEApplication
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.utils import COMMASPACE, formatdate
+
+_author__ = "Eugene Kondrashev"
+__copyright__ = "Copyright 2015, Eugene Kondrashev"
+__credits__ = ["Eugene Kondrashev"]
+__license__ = "MIT"
+__version__ = "0.0.1"
+__maintainer__ = "Eugene Kondrashev"
+__email__ = "eugene.kondrashev@gmail.com"
+__status__ = "Prototype"
 
 PORT_NUMBER = 8181
-
-#This class will handles any incoming request from
-#the browser
-class myHandler(BaseHTTPRequestHandler):
-
-	#Handler for the POST requests
-	def do_POST(self):
-		if self.path=="/push":
-			form = cgi.FieldStorage(
-				fp=self.rfile,
-				headers=self.headers,
-				environ={'REQUEST_METHOD':'POST',
-		                 'CONTENT_TYPE':self.headers['Content-Type'],
-			})
-
-			print "Your name is: %s" % form
-			self.send_response(200)
-			self.end_headers()
-			self.wfile.write("Thanks !")
-			return
+# parser = argparse.ArgumentParser()
+# parser.add_argument("user")
+# parser.add_argument("pass")
+# parser.add_argument("to")
 
 
-try:
-	#Create a web server and define the handler to manage the
-	#incoming request
-	server = HTTPServer(('', PORT_NUMBER), myHandler)
-	print 'Started httpserver on port ' , PORT_NUMBER
+def send(username, password, tousr, subj, body, files=None):
+	msg = MIMEMultipart(
+        From=username,
+        To=COMMASPACE.join(tousr),
+        Date=formatdate(localtime=True),
+    )
+	msg.attach(MIMEText(body))
+	msg['Subject'] = subj
 
-	#Wait forever for incoming htto requests
-	server.serve_forever()
+	for f in files or []:
+		with open(f, "rb") as fil:
+			msg.attach(MIMEApplication(
+				fil.read(),
+                Content_Disposition='attachment; filename="%s"' % basename(f),
+                Name=basename(f)
+            ))
 
-except KeyboardInterrupt:
-	print '^C received, shutting down the web server'
-	server.socket.close()
+#     headers = "\r\n".join(["from: " + username,
+#                        "subject: " + subj,
+#                        "to: " + tousr,
+#                        "mime-version: 1.0",
+#                        "content-type: text/html"])
+#
+#     # body_of_email can be plaintext or html!
+#     content = headers + "\r\n\r\n" + body
+#     import smtplib
+
+	# The below code never changes, though obviously those variables need values.
+	session = smtplib.SMTP('smtp.gmail.com', 587)
+	session.ehlo()
+	session.starttls()
+	session.login(username, password)
+	session.sendmail(username, tousr, msg.as_string())
+
+def authors(form):
+	result = set()
+	for commit in form['commits']:
+		result.add(commit['author']['email'])
+	return result
+
+def handler(path, username, password):
+	send(username, password, 'eugene.kondrashev@gmail.com', 'hey', 'hey1',
+		files=['/Users/ekondrashev/sources/python/webhooks/com.rcs.webhooks/.project'])
+	class Handler(BaseHTTPRequestHandler):
+
+		#Handler for the POST requests
+		def do_POST(self):
+			if self.path=="/push":
+				form = cgi.FieldStorage(
+					fp=self.rfile,
+					headers=self.headers,
+					environ={'REQUEST_METHOD':'POST',
+			                 'CONTENT_TYPE':self.headers['Content-Type'],
+				})
+				body = json.loads(form.value)
+				if body['ref'] == 'refs/head/master':
+					print "Form: %s" % form
+					self.send_response(200)
+					self.end_headers()
+					self.wfile.write("Thanks !")
+					log = os.path.join(
+						['/tmp', int(round(time.time() * 1000))]
+					)
+					print 'Log: %s' % log
+					if subprocess.Popen(['git', 'fetch', 'origin', '>>', log, '2>&1']).returncode == 0:
+						if subprocess.Popen(['git', 'rebase', 'origin/master', '>>', log, '2>&1']).returncode == 0:
+							p = subprocess.Popen(
+								['mvn', 'clean', 'install', '>>', log, '2>&1'],
+								cwd=path
+							)
+							if p.returncode == 0:
+								subj, msg = 'Build status: Ok', 'Cool'
+							else:
+								subj, msg = 'Build status: Failed', 'Not cool'
+					send(username, password, authors(body), subj, msg, path)
+					return
+
+
+if len(sys.argv) < 2:
+	print "Invalid path to build project and mail account name"
+else:
+	try:
+		#Create a web server and define the handler to manage the
+		#incoming request
+		server = HTTPServer(('', PORT_NUMBER), handler(sys.argv[1], sys.argv[2], getpass.getpass()))
+		print 'Started httpserver on port ' , PORT_NUMBER
+
+		#Wait forever for incoming htto requests
+		server.serve_forever()
+
+	except KeyboardInterrupt:
+		print '^C received, shutting down the web server'
+		server.socket.close()
