@@ -84,6 +84,7 @@ def handler(path, username, password):
 			                 'CONTENT_TYPE':self.headers['Content-Type'],
 				})
 				body = json.loads(form.value)
+				print body['ref']
 				if body['ref'] == 'refs/head/master':
 					print "Form: %s" % form
 					self.send_response(200)
