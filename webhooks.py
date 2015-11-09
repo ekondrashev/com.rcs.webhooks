@@ -91,7 +91,7 @@ def handler(path, username, password):
 					self.end_headers()
 					self.wfile.write("Thanks !")
 					log = os.path.join(
-						'/tmp', int(round(time.time() * 1000))
+						'/tmp', str(int(round(time.time() * 1000)))
 					)
 					print 'Log: %s' % log
 					if subprocess.Popen(['git', 'fetch', 'origin', '>>', log, '2>&1']).returncode == 0:
