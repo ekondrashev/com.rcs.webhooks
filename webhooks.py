@@ -85,7 +85,7 @@ def handler(path, username, password):
 				})
 				body = json.loads(form.value)
 				print body['ref']
-				if body['ref'] == 'refs/head/master':
+				if body['ref'] == 'refs/heads/master':
 					print "Form: %s" % form
 					self.send_response(200)
 					self.end_headers()
