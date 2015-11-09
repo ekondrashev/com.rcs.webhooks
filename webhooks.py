@@ -105,7 +105,7 @@ def handler(path, username, password):
 								subj, msg = 'Build status: Ok', 'Cool'
 							else:
 								subj, msg = 'Build status: Failed', 'Not cool'
-					send(username, password, authors(body), subj, msg, log)
+					send(username, password, authors(body), subj, msg, [log,])
 					return
 	return Handler
 
