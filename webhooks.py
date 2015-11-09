@@ -87,15 +87,17 @@ def rebuild(path):
 			stdout=logfile,
 			stderr=logfile
 		)
+		pull.wait()
 		print pull.returncode
 		if pull.returncode == 0:
-			p = subprocess.Popen(
+			build = subprocess.Popen(
 				shlex.split('mvn clean install'),
 				cwd=path,
 				stdout=logfile,
 				stderr=logfile
 			)
-			return p.returncode == 0, log
+			build.wait()
+			return build.returncode == 0, log
 	return None, log
 
 def handler(path, username, password):
@@ -132,7 +134,6 @@ if len(sys.argv) < 2:
 	print "Invalid path to build project and mail account name"
 else:
 	try:
-		rebuild(sys.argv[1])
 		#Create a web server and define the handler to manage the
 		#incoming request
 		server = HTTPServer(('', PORT_NUMBER), handler(sys.argv[1], sys.argv[2], getpass.getpass()))
