@@ -75,9 +75,9 @@ def authors(form):
 
 def rebuild(path):
 	print path
-	log = os.path.join(
+	log = '%s.txt' % (os.path.join(
 		'/tmp', str(int(round(time.time() * 1000)))
-	)
+	))
 	print 'Log: %s' % log
 	with open(log, 'w') as logfile:
 		if subprocess.Popen(
