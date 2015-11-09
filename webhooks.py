@@ -94,6 +94,7 @@ def handler(path, username, password):
 						'/tmp', str(int(round(time.time() * 1000)))
 					)
 					print 'Log: %s' % log
+					subj, msg = '', ''
 					if subprocess.Popen(['git', 'fetch', 'origin', '>>', log, '2>&1']).returncode == 0:
 						if subprocess.Popen(['git', 'rebase', 'origin/master', '>>', log, '2>&1']).returncode == 0:
 							p = subprocess.Popen(
@@ -104,7 +105,7 @@ def handler(path, username, password):
 								subj, msg = 'Build status: Ok', 'Cool'
 							else:
 								subj, msg = 'Build status: Failed', 'Not cool'
-					send(username, password, authors(body), subj, msg, path)
+					send(username, password, authors(body), subj, msg, log)
 					return
 	return Handler
 
